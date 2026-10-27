@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Secrets (never commit these)
+.env
+.streamlit/secrets.toml
+secrets.toml
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large local files. GitHub rejects files over 100 MB, so commit only a SMALL
+# hospital_discharges.csv (e.g. a 50,000-row sample) or upload the data in the app.
+hospital_discharges.xlsx
+*.zip
