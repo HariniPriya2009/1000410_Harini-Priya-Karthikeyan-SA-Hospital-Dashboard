@@ -258,7 +258,7 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     return df[mask]
 
 def style(fig: go.Figure, title: str, height: int = 340, legend: bool = False) -> go.Figure:
-      fig.update_layout(
+    fig.update_layout(
         title=dict(text=title, x=0, xanchor="left", font=dict(size=15, color=DARK)),
         height=height,
         template="plotly_white",
@@ -273,6 +273,8 @@ def style(fig: go.Figure, title: str, height: int = 340, legend: bool = False) -
     fig.update_xaxes(gridcolor="#ECEBF7", zeroline=False, automargin=True)
     fig.update_yaxes(gridcolor="#ECEBF7", zeroline=False, automargin=True)
     return fig
+
+
 def show_chart(fig: go.Figure, key: str) -> None:
     config = {"displaylogo": False, "responsive": True}
     st.plotly_chart(fig, key=f"chart_{key}", config=config, **STRETCH)
@@ -487,6 +489,21 @@ def fig_age_cost(df):
     fig.update_yaxes(title=f"Average amount ({cur()})")
     fig.update_xaxes(title="Age group", type="category")
     return style(fig, "Average charges vs average costs by age group", legend=True)
+
+def fig_mortality_los(df):
+    if not {"mortality", "los"}.issubset(df.columns):
+        return None
+    g = df.dropna(subset=["los"]).groupby("mortality", observed=True)["los"].agg(Average="mean", Records="size").reset_index()
+    g["mortality"] = g["mortality"].astype(str)
+    g = g[g["mortality"] != "Unknown"]
+    if g.empty:
+        return None
+    order = [c for c in SEVERITY_ORDER if c in set(g["mortality"])] + sorted(c for c in g["mortality"] if c not in SEVERITY_ORDER)
+    fig = px.bar(g, x="mortality", y="Average", color="mortality", color_discrete_map=SEVERITY_COLORS, custom_data=["Records"],
+                 category_orders={"mortality": order}, labels={"mortality": "APR risk of mortality", "Average": "Average length of stay (days)"})
+    fig.update_traces(hovertemplate="%{x}<br>Average stay: %{y:.2f} days<br>Records: %{customdata[0]:,}<extra></extra>")
+    return style(fig, "Average length of stay by risk of mortality")
+
 
 def fig_pay_charges(df, min_n):
     if not {"pay1", "charges"}.issubset(df.columns):
@@ -738,7 +755,17 @@ def page_cost(f: pd.DataFrame) -> None:
         with card("agecost"):
             plot(fig_age_cost(f), "agecost", "Average billed charges versus average estimated costs for each age group.")
 
-    grid([r_box, r_avg, r_cost, r_losbox, r_scatter, r_age])
+    def r_mort():
+        with card("mortlos"):
+            plot(fig_mortality_los(f), "mortlos",
+                 "Risk of mortality is the APR classification of how likely a patient is to die during the stay. Records with no value are left out.")
+
+    def r_riskmix():
+        with card("riskmix"):
+            plot(fig_donut(f, "mortality", "Risk mix: share of discharges by risk of mortality"), "riskmix",
+                 "Shows how many discharges fall in each mortality-risk class.")
+
+    grid([r_box, r_avg, r_cost, r_losbox, r_scatter, r_age, r_mort, r_riskmix])
 
     section("Payment type (research question 5)")
     min_pay = st.slider("Minimum records per payment type (bar chart)", 1, 1000, 10, key="min_pay")
