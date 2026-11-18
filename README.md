@@ -1,142 +1,166 @@
-# 1000410_Harini-Priya-Karthikeyan-SA-Hospital-Dashboard
+<p align="center">
+  <img src="assets/banner.svg" alt="MediScope Hospital Inpatient Discharges Dashboard" width="100%">
+</p>
 
-#  MediScope Health Analytics
-## Hospital Inpatient Discharges Dashboard
+<p align="center">
+  <a href="https://YOUR-APP-NAME.streamlit.app"><img src="https://img.shields.io/badge/LIVE%20APP-Open%20the%20dashboard-706DB3?style=for-the-badge&logo=streamlit&logoColor=white" alt="Live app"></a>
+</p>
 
- **Live Dashboard:** [Open MediScope Dashboard](https://1000410-harini-priya-karthikeyan-sa-hospital-dashboard.streamlit.app/)
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Streamlit-1.50+-FF4B4B?style=flat-square&logo=streamlit&logoColor=white" alt="Streamlit">
+  <img src="https://img.shields.io/badge/Plotly-interactive%20charts-3F4F75?style=flat-square&logo=plotly&logoColor=white" alt="Plotly">
+  <img src="https://img.shields.io/badge/pandas-2.1%2B-150458?style=flat-square&logo=pandas&logoColor=white" alt="pandas">
+  <img src="https://img.shields.io/badge/Data-SPARCS%202021-67B7B0?style=flat-square" alt="SPARCS 2021">
+  <img src="https://img.shields.io/badge/Rows-50%2C000-514F91?style=flat-square" alt="50,000 rows">
+</p>
 
-**Canva Link:**[Open Storyboard and Screenshots]( https://canva.link/ndi6y8w7yabsjy2)
-##  Project Overview
+<p align="center">
+  Sri Prasath.P &nbsp;|&nbsp; Registration number 1000408 &nbsp;|&nbsp; CRS: Artificial Intelligence<br>
+  Mathematics for AI-II &nbsp;|&nbsp; Jain Vidyalaya IB World School
+</p>
 
-MediScope Health Analytics is an interactive healthcare data analytics dashboard developed using Python and Streamlit.
+---
 
-The project analyses hospital inpatient discharge records to identify patterns in patient demographics, hospital admissions, length of stay, diagnosis categories, hospital charges, healthcare costs, and hospital utilisation.
+## Project overview
 
-The dashboard helps hospital administrators and healthcare professionals explore data through interactive visualisations and make informed, data-driven operational decisions.
+MediScope Health Analytics works with hospitals to improve patient care and operations. This dashboard helps hospital administrators, clinicians and operations managers see where stays run long, where charges climb and how hospitals and counties differ.
 
-##  Project Objectives
+The data is the New York State SPARCS de-identified inpatient discharge file for 2021. The repository holds a 50,000-row sample (33 columns, 202 facilities, 57 counties), which keeps it well under GitHub's 100 MB file limit. A full-size CSV or Excel file with the same columns can be uploaded from the app sidebar.
 
-- Analyse hospital inpatient discharge trends.
-- Understand patient demographics and diagnosis patterns.
-- Examine the relationship between illness severity and hospital charges.
-- Identify hospitals and counties with longer average patient stays.
-- Explore payment methods and healthcare expenditure.
-- Present healthcare data through an interactive dashboard.
+<p align="center">
+  <img src="assets/pipeline.svg" alt="Pipeline from data to deployment" width="100%">
+</p>
 
-##  Key Features
+## What the data says
 
-### 1. Summary Dashboard
-- Total discharge records.
-- Average length of hospital stay.
-- Total hospital charges.
-- Total hospital costs.
-- Discharge distribution by admission type.
-- Gender distribution.
-- Length-of-stay distribution.
+<p align="center">
+  <img src="assets/insights.svg" alt="Charges by severity, stay by mortality risk and payer share" width="100%">
+</p>
 
-### 2. Patient Analysis
-- Patient distribution by age group.
-- Gender and race distribution.
-- Diagnosis-wise average length of stay.
-- Hospital charges by age group and gender.
-- Top diagnoses based on discharge records.
+Charges rise 6 times from Minor to Extreme severity ($36K to $219K), and the average stay grows from 2.9 to 14.7 days. Length of stay and total charges have a Pearson correlation of 0.69 in this sample. These are associations, not proof of cause and effect.
 
-### 3. Cost Analysis
-- Hospital charges by severity of illness.
-- Average charges by severity level.
-- Total hospital costs by severity.
-- Length of stay versus hospital charges.
-- Charges and costs by age group.
-- Payment type distribution.
-- Average charges by primary payment type.
-
-### 4. Hospital Analysis
-- Interactive hospital and county heatmap.
-- Top 10 hospitals by discharge volume.
-- Average length of stay by county.
-- Hospital summary table.
-- Facility-wise diagnosis comparison.
-
-### 5. Data Quality
-- Dataset dimensions and column information.
-- Missing-value analysis.
-- Duplicate record identification.
-- Invalid length-of-stay detection.
-- Numeric summary statistics.
-- Cleaned dataset preview.
-- Download cleaned dataset.
-
-## 🔍 Research Questions
-
-The dashboard is designed to investigate five key questions:
-
-1. Which diagnoses are associated with the longest average hospital stays?
-2. How do hospital charges vary across different age groups and genders?
-3. How does the severity of illness relate to hospital charges and length of stay?
-4. Which hospitals and counties have the longest average patient stays?
-5. How do different payment types vary in discharge volume and hospital charges?
-
-## Project Structure
-
-```text
-MediScope-Health-Analytics/
-│
-├── app.py
-├── requirements.txt
-├── README.md
-├── .gitignore
-│
-├── hospital_discharges.csv
-│
-└── screenshots/
-    ├── summary.png
-    ├── patient_analysis.png
-    ├── cost_analysis.png
-    ├── hospital_analysis.png
-    └── data_quality.png
+```mermaid
+pie showData title Primary payer, share of 50,000 discharges (%)
+    "Medicare" : 39.4
+    "Medicaid" : 30.8
+    "Private insurance" : 14.7
+    "Blue Cross/Blue Shield" : 10.5
+    "Other payers" : 4.6
 ```
 
-*Note: The dataset can be uploaded directly through the dashboard also.*
+## Research questions
 
-## Data Processing
+| # | Question | Where to find it |
+|---|---|---|
+| 1 | Which diagnoses are linked to the longest stays? | Patient Analysis |
+| 2 | How do charges vary by age group and gender? | Patient Analysis, Cost Analysis |
+| 3 | How do severity, charges and length of stay relate? | Cost Analysis |
+| 4 | Which hospitals and counties have the longest average stay? | Hospital Analysis |
+| 5 | How do payment types differ in volume and charges? | Cost Analysis |
 
-The application performs the following preprocessing operations:
+## Dashboard pages
 
-- Standardises dataset column names.
-- Cleans categorical values.
-- Converts hospital charges and costs into numeric values.
-- Handles missing values.
-- Identifies duplicate records.
-- Detects invalid length-of-stay values.
-- Standardises age groups and gender categories.
-- Converts severity codes into readable categories where possible.
-- Investigates extreme charge values without automatically deleting valid records.
+| Page | What it shows |
+|---|---|
+| Summary | KPI cards, admission types, gender split, length-of-stay histogram, severity counts, filtered CSV download |
+| Patient Analysis | Age, gender, race and ethnicity counts; average stay by diagnosis; charges by age group and gender |
+| Cost Analysis | Box plot of charges by severity, average charges and total costs by severity, stay by severity, stay vs charges scatter, charges vs costs by age group, stay and share of discharges by mortality risk, payment type pie chart and average charges by payer |
+| Hospital Analysis | Facility by county heatmap of average stay, top 10 hospitals by volume, counties with the longest stay, hospital summary table, diagnosis view for one facility |
+| Data Quality | Row, column, missing value and duplicate counts, cleaning notes, numeric summary, cleaned data preview and download |
 
-The dashboard uses the uploaded hospital discharge dataset and calculates its metrics dynamically.
+The five visuals required by the brief:
 
+| Required visual | Chart in the app |
+|---|---|
+| Bar chart | Average stay per diagnosis (Patient Analysis) |
+| Box plot | Total charges by severity (Cost Analysis) |
+| Heatmap | Average stay by facility and county (Hospital Analysis) |
+| Pie chart | Discharges by primary payment type (Cost Analysis) |
+| Histogram | Length of stay distribution (Summary) |
 
-## Expected Outcomes
+## Key features
 
-- Better understanding of inpatient discharge patterns.
-- Identification of diagnoses associated with longer hospital stays.
-- Improved visibility into hospital expenditure.
-- Comparison of healthcare utilisation across facilities and counties.
-- Data-driven insights to support hospital operational planning.
+- Sidebar filters for year, county, facility, age group, gender, severity, admission type and payment type, with a Clear Filters button.
+- Interactive Plotly charts with hover details.
+- Upload your own CSV or Excel file, or change the currency symbol.
+- A short reading note under every chart. Hospital figures are described as activity, not quality.
 
-## Limitations
+## How the app is wired
 
-- The analysis depends on the quality and completeness of the uploaded dataset.
-- Missing or unavailable columns may limit certain visualisations.
-- The dataset contains discharge records; reliable readmission rates cannot be established without linked patient admission histories.
-- The dashboard is intended for educational and analytical purposes and is not a clinical decision-making system.
+```mermaid
+flowchart LR
+    A[hospital_discharges.csv<br>or uploaded file] --> B[Column matching]
+    B --> C[Cleaning and type conversion]
+    C --> D[(Cached dataframe)]
+    D --> E[Sidebar filters]
+    E --> F[Summary]
+    E --> G[Patient Analysis]
+    E --> H[Cost Analysis]
+    E --> I[Hospital Analysis]
+    D --> J[Data Quality]
+```
 
-## Project Information
+<details>
+<summary><b>Data cleaning steps</b></summary>
 
-**Student Name:** Harini Priya Karthikeyan
+- Column names are matched against a fixed list, so small naming differences in the file still load.
+- Charges and costs are converted from text to numbers.
+- Negative or unreadable lengths of stay are set to missing. Top-coded stays such as "120+" are counted at the number shown and flagged.
+- Age groups, gender, severity and other categories are standardised. Age groups and severity keep their natural order.
+- Birth Weight is dropped when fewer than half the records have a usable value (9.9% here).
+- Blank categories become "Unknown". Exact duplicate rows are counted and kept unless the sidebar option is ticked.
+- Extreme charges (above Q3 + 3 x IQR) are flagged, not deleted. The Cost Analysis page can hide them from the box plot and scatter plot only.
+- Facility IDs, certificate numbers and ZIP prefixes are hidden from previews and downloads.
 
-**CRS:** Artificial Intelligence
+</details>
 
-**Project:** Hospital Inpatient Discharges Dashboard
+## Integration details
 
-**Organisation:** MediScope Health Analytics
+| Part | Tool |
+|---|---|
+| Data handling | pandas, NumPy |
+| Charts | Plotly (Express and Graph Objects) |
+| App framework | Streamlit |
+| Excel input | openpyxl |
+| Version control | GitHub |
+| Hosting | Streamlit Community Cloud |
 
+```
+app.py                   main dashboard code
+requirements.txt         dependency ranges
+hospital_discharges.csv  sample dataset (50,000 rows)
+assets/                  animated graphics used in this README
+.streamlit/config.toml   theme and upload size
+.gitignore
+README.md
+```
+
+`app.py` loads `hospital_discharges.csv` from its own folder. If the file is missing it shows a welcome screen and asks for an upload. Cleaning results are cached with `st.cache_data`, so changing a filter does not reload the file.
+
+## Deployment instructions
+
+Run locally:
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Deploy on Streamlit Community Cloud:
+
+1. Push every file in the layout above to a public GitHub repository.
+2. Open [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+3. Click Deploy an app, then pick the repository and branch.
+4. Set the main file path to `app.py` and click Deploy.
+5. Copy the app link into the Live app badge at the top of this README.
+
+## Screenshots
+
+Add one screenshot per page here, for example `![Summary](screenshots/summary.png)`.
+
+## Limits
+
+- The dashboard describes patterns in the data. It does not show cause and effect, and it is not a clinical diagnosis tool.
+- The sample covers one discharge year, so no yearly trend is shown.
+- Hospital averages depend on case mix and specialisation, so they should not be used to rank hospital quality.
