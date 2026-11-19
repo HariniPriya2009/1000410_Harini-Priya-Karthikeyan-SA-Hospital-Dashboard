@@ -8,6 +8,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
+
+import hero3d
+import ui
 st.set_page_config(
     page_title="MediScope Health Analytics",
     page_icon="🩺",
@@ -17,17 +21,17 @@ st.set_page_config(
 
 BASE_DIR = Path(__file__).parent
 DEFAULT_FILES = [BASE_DIR / "hospital_discharges.csv", BASE_DIR / "hospital_discharges.xlsx"]
-PRIMARY = "#706DB3"
-DARK = "#514F91"
-BG = "#F3F2FB"
-CARD = "#FFFFFF"
-TEXT = "#292A46"
-TEAL = "#67B7B0"
-MUTED = "#6B6C8A"
-PALETTE = [PRIMARY, TEAL, "#9C99D6", DARK, "#A8D8D3", "#C9C7EA", "#8E8BC7", "#3F8F89"]
+PRIMARY = ui.BLUE
+DARK = ui.DEEP
+BG = ui.BG
+CARD = ui.CARD
+TEXT = ui.NAVY
+TEAL = ui.GREEN
+MUTED = ui.MUTED
+PALETTE = ui.PALETTE
 
 SEVERITY_ORDER = ["Minor", "Moderate", "Major", "Extreme"]
-SEVERITY_COLORS = {"Minor": "#A8D8D3", "Moderate": TEAL, "Major": "#8E8BC7", "Extreme": DARK, "Unknown": "#C9C7EA"}
+SEVERITY_COLORS = ui.SEVERITY_COLORS
 SEVERITY_CODE_MAP = {"1": "Minor", "2": "Moderate", "3": "Major", "4": "Extreme"}
 RAW_COLUMNS = {
     "service_area": ["Hospital Service Area"],
@@ -270,8 +274,8 @@ def style(fig: go.Figure, title: str, height: int = 340, legend: bool = False) -
         colorway=PALETTE,
         hoverlabel=dict(bgcolor="white", font_size=12),
     )
-    fig.update_xaxes(gridcolor="#ECEBF7", zeroline=False, automargin=True)
-    fig.update_yaxes(gridcolor="#ECEBF7", zeroline=False, automargin=True)
+    fig.update_xaxes(gridcolor="#E3EEF6", zeroline=False, automargin=True)
+    fig.update_yaxes(gridcolor="#E3EEF6", zeroline=False, automargin=True)
     return fig
 
 
@@ -539,7 +543,7 @@ def fig_heatmap(df, col, n_fac, n_col, min_n):
     mean = mean[keep]
     ys, xs = [str(i) for i in mean.index], [str(c) for c in mean.columns]
     label = LABELS.get(col, col)
-    fig = go.Figure(go.Heatmap(z=mean.to_numpy(), x=xs, y=ys, hoverongaps=False, colorscale=[[0, BG], [0.5, "#9C99D6"], [1, DARK]],
+    fig = go.Figure(go.Heatmap(z=mean.to_numpy(), x=xs, y=ys, hoverongaps=False, colorscale=ui.HEAT_SCALE,
                                colorbar=dict(title="Avg stay (days)"),
                                hovertemplate="%{y}<br>" + label + ": %{x}<br>Average stay: %{z:.2f} days<extra></extra>"))
     fig.update_yaxes(autorange="reversed", tickmode="array", tickvals=ys, ticktext=[short(y, 38) for y in ys])
@@ -582,27 +586,60 @@ def hospital_table(df):
     return g
 
 def page_header(title: str, subtitle: str) -> None:
-    st.markdown(f'<div class="page-title">{title}</div><div class="page-sub">{subtitle}</div>', unsafe_allow_html=True)
+    icon = PAGE_ICONS.get(title, "✚")
+    st.markdown(ui.banner_html(title, subtitle, icon), unsafe_allow_html=True)
 
 def section(title: str) -> None:
     st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
 
 def kpi_cards(items: list) -> None:
-    for column, (icon, label, value) in zip(st.columns(len(items)), items):
-        column.markdown(
-            f'<div class="kpi"><div class="kpi-icon">{icon}</div>'
-            f'<div><div class="kpi-label">{label}</div><div class="kpi-value">{value}</div></div></div>',
-            unsafe_allow_html=True,
-        )
+    for column, html in zip(st.columns(len(items)), ui.kpi_html(items)):
+        column.markdown(html, unsafe_allow_html=True)
+
+def embed_html(html: str, height: int) -> None:
+    """st.iframe on current Streamlit, components.html on older versions (components.v1.html is being removed)."""
+    if hasattr(st, "iframe"):
+        st.iframe(html, height=height)
+    else:
+        components.html(html, height=height)
+
+def hero_data(df: pd.DataFrame) -> dict:
+    """Numbers and speech-bubble facts for the 3D hero. Uses the whole dataset so the hero never reloads when filters change."""
+    stats, facts = [], []
+    stats.append({"label": "Discharge records", "value": float(len(df)), "decimals": 0})
+    if "los" in df.columns and df["los"].notna().any():
+        stats.append({"label": "Average stay (days)", "value": float(df["los"].mean()), "decimals": 2})
+        facts.append(f"Half of all stays are {df['los'].median():.0f} days or shorter.")
+    if "charges" in df.columns and df["charges"].notna().any():
+        total = float(df["charges"].sum())
+        unit, div = ("B", 1e9) if total >= 1e9 else ("M", 1e6) if total >= 1e6 else ("K", 1e3)
+        stats.append({"label": "Total charges", "value": total / div, "decimals": 2, "prefix": cur(), "suffix": unit})
+    if "facility" in df.columns:
+        stats.append({"label": "Hospitals", "value": float(df["facility"].nunique()), "decimals": 0})
+        top = df["facility"].astype(str).value_counts()
+        if len(top):
+            facts.append(f"Busiest hospital here: {top.index[0]} with {int(top.iloc[0]):,} discharges.")
+    if "pay1" in df.columns:
+        pay = df["pay1"].astype(str).value_counts(normalize=True)
+        pay = pay[pay.index != "Unknown"]
+        if len(pay):
+            facts.append(f"{pay.index[0]} is the top payer, at {pay.iloc[0] * 100:.0f}% of discharges.")
+    if "admission_type" in df.columns:
+        adm = df["admission_type"].astype(str).value_counts(normalize=True)
+        adm = adm[adm.index != "Unknown"]
+        if len(adm):
+            facts.append(f"{adm.index[0]} is the most common way in: {adm.iloc[0] * 100:.0f}% of admissions.")
+    facts.insert(0, "Hi, I'm Jabby! Click me and I'll share a fact.")
+    return {"stats": stats[:4], "facts": facts}
 
 def download_block(data: pd.DataFrame, label: str, filename: str, key: str) -> None:
     out = data.drop(columns=[c for c in HIDDEN_COLUMNS if c in data.columns]).rename(columns=LABELS)
     if len(out) <= 100_000 or st.checkbox(f"Prepare {label.lower()} ({len(out):,} rows)", key=f"prep_{key}"):
         st.download_button(label, out.to_csv(index=False).encode("utf-8"), file_name=filename, mime="text/csv", key=f"dl_{key}", **STRETCH)
 
-def page_summary(f: pd.DataFrame, total_rows: int) -> None:
-    page_header("Hospital Inpatient Discharges Dashboard",
-                "Interactive insights into patient demographics, hospital utilisation, and healthcare expenditure.")
+def page_summary(f: pd.DataFrame, total_rows: int, full: pd.DataFrame) -> None:
+    with st.container(key="hero"):
+        embed_html(hero3d.hero_html(hero_data(full)), 470)
     avg_los = f["los"].mean() if "los" in f.columns else np.nan
     charges = f["charges"].sum() if "charges" in f.columns else np.nan
     costs = f["costs"].sum() if "costs" in f.columns else np.nan
@@ -890,43 +927,7 @@ def page_quality(df: pd.DataFrame, report: dict) -> None:
         st.caption("Identifier-style columns (facility IDs, certificate numbers, ZIP prefix) are hidden. The data is de-identified; no personal identifiers are shown.")
     download_block(df, "Download cleaned dataset (CSV)", "cleaned_discharges.csv", "quality")
 
-CSS = f"""
-<style>
-.stApp {{ background: {BG}; color: {TEXT}; }}
-[data-testid="stHeader"] {{ background: transparent; }}
-.block-container {{ padding-top: 1.6rem; padding-bottom: 2.5rem; max-width: 1500px; }}
-.page-title {{ font-size: 1.65rem; font-weight: 700; color: {DARK}; margin: 0; line-height: 1.25; }}
-.page-sub {{ font-size: .95rem; color: {MUTED}; margin: .15rem 0 1.1rem 0; }}
-.section-title {{ font-size: 1.1rem; font-weight: 700; color: {DARK}; margin: 1.3rem 0 .6rem 0; }}
-.kpi {{ background: {CARD}; border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; align-items: center;
-        box-shadow: 0 2px 10px rgba(81,79,145,.10); min-height: 76px; }}
-.kpi-icon {{ width: 40px; height: 40px; border-radius: 10px; background: #EDEBFA; display: flex; align-items: center; justify-content: center; font-size: 20px; flex: none; }}
-.kpi-label {{ font-size: .78rem; color: {MUTED}; font-weight: 600; }}
-.kpi-value {{ font-size: 1.4rem; font-weight: 700; color: {TEXT}; line-height: 1.2; }}
-div[class*="st-key-card_"] {{ background: {CARD}; border-radius: 14px; padding: 14px 18px 8px 18px; box-shadow: 0 2px 10px rgba(81,79,145,.10); margin-bottom: .6rem; }}
-section[data-testid="stSidebar"] {{ background: {PRIMARY}; }}
-section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
-section[data-testid="stSidebar"] .stCaption, section[data-testid="stSidebar"] summary p,
-section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {{ color: #FFFFFF !important; }}
-section[data-testid="stSidebar"] h3 {{ font-size: 1.05rem; margin-top: .6rem; }}
-.brand {{ display: flex; align-items: center; gap: 10px; margin: .2rem 0 1rem 0; }}
-.brand-logo {{ width: 40px; height: 40px; border-radius: 12px; background: #FFFFFF; color: {PRIMARY}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; }}
-.brand-name {{ color: #FFFFFF; font-weight: 700; font-size: 1.05rem; line-height: 1.2; }}
-section[data-testid="stSidebar"] div[role="radiogroup"] label {{ padding: 8px 12px; border-radius: 10px; width: 100%; }}
-section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {{ display: none; }}
-section[data-testid="stSidebar"] div[role="radiogroup"] label p {{ color: #FFFFFF !important; font-weight: 600; }}
-section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {{ background: rgba(255,255,255,.22); }}
-section[data-testid="stSidebar"] .stButton button {{ background: #FFFFFF; color: {DARK}; border: none; border-radius: 10px; font-weight: 600; }}
-section[data-testid="stSidebar"] [data-baseweb="tag"] {{ background: #EDEBFA !important; }}
-section[data-testid="stSidebar"] [data-baseweb="tag"] span {{ color: {DARK} !important; }}
-section[data-testid="stSidebar"] details {{ background: rgba(255,255,255,.12); border: none; border-radius: 10px; }}
-.stDownloadButton button {{ background: {PRIMARY}; color: #FFFFFF; border: none; border-radius: 10px; }}
-.stDownloadButton button:hover {{ background: {DARK}; color: #FFFFFF; }}
-</style>
-"""
-
-BRAND = '<div class="brand"><div class="brand-logo">✚</div><div class="brand-name">MediScope<br>Health Analytics</div></div>'
+BRAND = ui.BRAND
 
 
 def welcome_screen() -> None:
@@ -940,13 +941,14 @@ def welcome_screen() -> None:
 
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
+    st.markdown(ui.css(), unsafe_allow_html=True)
     sb = st.sidebar
     sb.markdown(BRAND, unsafe_allow_html=True)
     nav_box, filter_box, data_box = sb.container(), sb.container(), sb.container()  # fixes the visual order
 
     with nav_box:
         page = st.radio("Navigate", PAGES, key="page", label_visibility="collapsed", format_func=lambda p: f"{PAGE_ICONS[p]}  {p}")
+        st.markdown(ui.mascot_html(page), unsafe_allow_html=True)
 
     default_path = next((p for p in DEFAULT_FILES if p.exists()), None)
     with data_box:
@@ -990,7 +992,7 @@ def main() -> None:
         page_header(page, "No records match the current filters.")
         st.warning("No discharge records match the selected filters. Use “Clear Filters” in the sidebar or widen your selection.")
     elif page == "Summary":
-        page_summary(filtered, len(df))
+        page_summary(filtered, len(df), df)
     elif page == "Patient Analysis":
         page_patient(filtered)
     elif page == "Cost Analysis":
