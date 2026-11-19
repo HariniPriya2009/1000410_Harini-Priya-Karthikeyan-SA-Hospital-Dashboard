@@ -41,6 +41,14 @@ ICONS = {
 ICON_ALIASES = {"📋": "records", "⏱️": "clock", "💳": "money", "🏥": "hospital", "🧾": "records",
                 "🧱": "layers", "❓": "help", "♊": "copy", "⚠️": "alert"}
 
+SCENES = {
+    "Summary": ("Hospital Exterior", "Click the right side of the window for a fact from Jabby"),
+    "Patient Analysis": ("Scanner Room", "The scanner runs while you read the patient charts"),
+    "Cost Analysis": ("Reception and Billing", "Charges, costs and payers, one counter at a time"),
+    "Hospital Analysis": ("Hospital Globe", "Drag to spin the globe. Red pins are New York counties"),
+    "Data Quality": ("Clean Wards", "Every record checked, every outlier kept"),
+}
+
 PAGE_TIPS = {
     "Summary": "Hi, I'm Syro! Start here for the big picture, then pick a page.",
     "Patient Analysis": "Raise the minimum records slider to hide diagnoses with only a few cases.",
@@ -158,6 +166,18 @@ section[data-testid="stSidebar"] details{background:#fff;border:1px solid var(--
 .syro .shadow{transform-box:fill-box;transform-origin:center;animation:shadow 3.4s ease-in-out infinite}
 @keyframes shadow{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.82)}}
 
+
+/* 3D world layer: full-screen, click-through, behind the page. It only draws inside #scene-window. */
+.st-key-world{position:fixed!important;inset:0;z-index:-1;pointer-events:none;margin:0!important;padding:0!important;width:100vw!important;height:100vh!important;overflow:hidden}
+.st-key-world>div,.st-key-world iframe{width:100vw!important;height:100vh!important;border:0;display:block}
+#page-marker{display:none}
+.scene-window{position:relative;height:300px;margin:0 0 18px;border-radius:24px;overflow:hidden;box-shadow:0 18px 44px rgba(30,111,217,.2),inset 0 0 0 1.5px rgba(255,255,255,.9);border:1px solid #CFE3F5}
+.sw-chip{position:absolute;left:16px;top:14px;display:flex;gap:9px;align-items:center;background:rgba(255,255,255,.88);border:1px solid rgba(255,255,255,.95);border-radius:999px;padding:7px 15px;font-weight:800;color:var(--deep);font-size:.85rem;box-shadow:0 6px 18px rgba(14,42,71,.12);z-index:2}
+.sw-chip i{width:9px;height:9px;border-radius:50%;background:var(--red);animation:blip 1.4s infinite}
+@keyframes blip{0%,100%{box-shadow:0 0 0 0 rgba(229,56,79,.55)}70%{box-shadow:0 0 0 8px rgba(229,56,79,0)}}
+.sw-hint{position:absolute;left:16px;bottom:12px;background:rgba(14,42,71,.62);color:#fff;border-radius:999px;padding:5px 12px;font-size:.74rem;font-weight:600;z-index:2;max-width:70%}
+@media (max-width:640px){.scene-window{height:240px}.sw-hint{display:none}}
+
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 """
@@ -230,3 +250,16 @@ def mascot_html(page: str) -> str:
 <circle cx="43" cy="119" r="4" fill="#FF8FA3" opacity=".6"/><circle cx="77" cy="119" r="4" fill="#FF8FA3" opacity=".6"/>
 </svg>"""
     return f'<div class="syro">{svg}<div class="syro-bubble">{tip}</div></div>'
+
+
+def scene_window(scene: str | None) -> str:
+    """Transparent hole in the page. The 3D world draws itself inside this rectangle."""
+    if scene not in SCENES:
+        return ""
+    name, hint = SCENES[scene]
+    return (f'<div class="scene-window" id="scene-window"><div class="sw-chip"><i></i>{name}</div>'
+            f'<div class="sw-hint">{hint}</div></div>')
+
+
+def page_marker(page: str) -> str:
+    return f'<div id="page-marker" data-page="{page}"></div>'
