@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
-import hero3d
+import world3d
 import ui
 st.set_page_config(
     page_title="MediScope Health Analytics",
@@ -585,9 +585,10 @@ def hospital_table(df):
         g[col] = g[col].round(2 if "Stay" in col else 0)
     return g
 
-def page_header(title: str, subtitle: str) -> None:
+def page_header(title: str, subtitle: str, scene: str | None = None) -> None:
     icon = PAGE_ICONS.get(title, "✚")
-    st.markdown(ui.banner_html(title, subtitle, icon), unsafe_allow_html=True)
+    scene = scene or (title if title in ui.SCENES else None)
+    st.markdown(ui.banner_html(title, subtitle, icon) + ui.scene_window(scene), unsafe_allow_html=True)
 
 def section(title: str) -> None:
     st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
@@ -603,22 +604,15 @@ def embed_html(html: str, height: int) -> None:
     else:
         components.html(html, height=height)
 
-def hero_data(df: pd.DataFrame) -> dict:
-    """Numbers and speech-bubble facts for the 3D hero. Uses the whole dataset so the hero never reloads when filters change."""
-    stats, facts = [], []
-    stats.append({"label": "Discharge records", "value": float(len(df)), "decimals": 0})
+def world_data(df: pd.DataFrame) -> dict:
+    """Facts, tips and globe pins for the 3D world. Built from the whole dataset, so filters never reload the scene."""
+    facts = []
     if "los" in df.columns and df["los"].notna().any():
-        stats.append({"label": "Average stay (days)", "value": float(df["los"].mean()), "decimals": 2})
         facts.append(f"Half of all stays are {df['los'].median():.0f} days or shorter.")
-    if "charges" in df.columns and df["charges"].notna().any():
-        total = float(df["charges"].sum())
-        unit, div = ("B", 1e9) if total >= 1e9 else ("M", 1e6) if total >= 1e6 else ("K", 1e3)
-        stats.append({"label": "Total charges", "value": total / div, "decimals": 2, "prefix": cur(), "suffix": unit})
     if "facility" in df.columns:
-        stats.append({"label": "Hospitals", "value": float(df["facility"].nunique()), "decimals": 0})
         top = df["facility"].astype(str).value_counts()
         if len(top):
-            facts.append(f"Busiest hospital here: {top.index[0]} with {int(top.iloc[0]):,} discharges.")
+            facts.append(f"Busiest hospital here: {top.index[0]}, with {int(top.iloc[0]):,} discharges.")
     if "pay1" in df.columns:
         pay = df["pay1"].astype(str).value_counts(normalize=True)
         pay = pay[pay.index != "Unknown"]
@@ -629,8 +623,21 @@ def hero_data(df: pd.DataFrame) -> dict:
         adm = adm[adm.index != "Unknown"]
         if len(adm):
             facts.append(f"{adm.index[0]} is the most common way in: {adm.iloc[0] * 100:.0f}% of admissions.")
-    facts.insert(0, "Hi, I'm Jabby! Click me and I'll share a fact.")
-    return {"stats": stats[:4], "facts": facts}
+    pins = []
+    if "county" in df.columns:
+        for name, count in df["county"].astype(str).value_counts().head(28).items():
+            if name in world3d.COUNTY_LATLON:
+                lat, lon = world3d.COUNTY_LATLON[name]
+                pins.append({"n": name, "lat": lat, "lon": lon, "v": int(count)})
+    tips = {
+        "Summary": ["Hi, I'm Jabby! Welcome to MediScope Hospital.", "Pick a page in the sidebar and I'll fly you to that department."],
+        "Patient Analysis": ["Welcome to the scanner room. This page shows who is being discharged.", "Raise the minimum records slider to hide rare diagnoses."],
+        "Cost Analysis": ["This is billing. Charges are what hospitals bill.", "Costs are what the care really takes to deliver."],
+        "Hospital Analysis": ["Drag the globe to spin it. Red pins are New York counties.", "A long stay is not always bad. Case mix changes the picture."],
+        "Data Quality": ["Clean data, clean wards. Outliers are kept, not deleted.", "Duplicates are flagged. You choose whether to remove them."],
+    }
+    hospitals = int(df["facility"].nunique()) if "facility" in df.columns else 0
+    return {"facts": facts, "tips": tips, "pins": pins, "hospitals": hospitals}
 
 def download_block(data: pd.DataFrame, label: str, filename: str, key: str) -> None:
     out = data.drop(columns=[c for c in HIDDEN_COLUMNS if c in data.columns]).rename(columns=LABELS)
@@ -638,8 +645,8 @@ def download_block(data: pd.DataFrame, label: str, filename: str, key: str) -> N
         st.download_button(label, out.to_csv(index=False).encode("utf-8"), file_name=filename, mime="text/csv", key=f"dl_{key}", **STRETCH)
 
 def page_summary(f: pd.DataFrame, total_rows: int, full: pd.DataFrame) -> None:
-    with st.container(key="hero"):
-        embed_html(hero3d.hero_html(hero_data(full)), 470)
+    page_header("Hospital Inpatient Discharges Dashboard",
+                "Interactive insights into patient demographics, hospital utilisation, and healthcare expenditure.", scene="Summary")
     avg_los = f["los"].mean() if "los" in f.columns else np.nan
     charges = f["charges"].sum() if "charges" in f.columns else np.nan
     costs = f["costs"].sum() if "costs" in f.columns else np.nan
@@ -985,6 +992,10 @@ def main() -> None:
     with filter_box:
         render_filters(df)
     filtered = apply_filters(df)
+
+    with st.container(key="world"):
+        embed_html(world3d.world_html(world_data(df)), 600)
+    st.markdown(ui.page_marker(page), unsafe_allow_html=True)
 
     if page == "Data Quality":
         page_quality(df, report)
